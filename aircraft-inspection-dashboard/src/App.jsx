@@ -14,7 +14,7 @@ export default function App() {
   // --- NEW: Step 1. Fetching Data on Load ---
   // useEffect runs automatically when the component first appears on the screen
   useEffect(() => {
-    fetch('http://localhost:3000/api/logs')
+    fetch('https://inspection-dashboard-6ds8.onrender.com/api/logs')
       .then(response => response.json())
       .then(data => {
         setInspectionLogs(data); // Put the server data into our React state
@@ -38,7 +38,7 @@ export default function App() {
     
     try {
       // We send the POST request to our Node.js server
-      const response = await fetch('http://localhost:3000/api/logs', {
+      const response = await fetch('https://inspection-dashboard-6ds8.onrender.com/api/logs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json' // Tell the server we are sending JSON
