@@ -28,3 +28,49 @@
   margin-bottom: 0.25rem;
   color: #4a5568;
 }
+/* =========================================
+   📱 MOBILE RESPONSIVENESS (Media Queries)
+   ========================================= */
+
+@media (max-width: 600px) {
+  /* 1. Make the main container take up the whole screen */
+  .dashboard-container {
+    margin: 0;
+    padding: 1rem;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* 2. Adjust typography for smaller screens */
+  h1 {
+    font-size: 1.5rem;
+  }
+  
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  /* 3. Make form fields larger and touch-friendly */
+  input, select, textarea {
+    font-size: 1rem; /* Prevents iPhones from auto-zooming! */
+    padding: 0.75rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* 4. Make the submit button a massive tap target */
+  .submit-btn {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+    margin-top: 1rem;
+  }
+
+  /* 5. Tighten up the log cards so they fit the screen */
+  .log-card {
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+  }
+}
