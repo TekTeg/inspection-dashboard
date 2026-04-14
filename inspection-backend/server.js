@@ -11,8 +11,12 @@ app.use(express.json());
 
 // --- NEW: Database Connection Pool ---
 // A "Pool" manages multiple connections to your database efficiently
+// --- Database Connection Pool ---
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false 
+    }
 });
 
 // Test the connection on startup
