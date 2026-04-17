@@ -19,7 +19,7 @@ export default function App() {
   // Fetch both Logs and Tail Numbers on load
   useEffect(() => {
     // ⚠️ REPLACE 'YOUR_RENDER_URL' WITH YOUR ACTUAL RENDER LINK
-    const API_BASE = 'YOUR_RENDER_URL'; 
+    const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com'; 
 
     fetch(`${API_BASE}/api/logs`)
       .then(res => res.json())
@@ -82,7 +82,7 @@ export default function App() {
     const confirmDelete = window.confirm(`Permanently delete ${tailToDelete.tail_number}?`);
     if (!confirmDelete) return;
 
-    const API_BASE = 'YOUR_RENDER_URL';
+    const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com';
     await fetch(`${API_BASE}/api/tail-numbers/${tailToDelete.id}`, { method: 'DELETE' });
 
     const updatedTails = tailNumbers.filter(t => t.id !== tailToDelete.id);
@@ -95,7 +95,7 @@ export default function App() {
 
   const handleSubmit = async (event) => {
     event.preventDefault(); 
-    const API_BASE = 'YOUR_RENDER_URL';
+    const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com';
     
     const response = await fetch(`${API_BASE}/api/logs`, {
       method: 'POST',
