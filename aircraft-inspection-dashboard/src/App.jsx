@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'; // NEW: We imported useEffect
+import { useState, useEffect } from 'react';
 import './App.css'; 
 
 export default function App() {
@@ -10,59 +10,90 @@ export default function App() {
   });
 
   const [inspectionLogs, setInspectionLogs] = useState([]);
+  
+  // NEW STATE: For managing the dynamic tail numbers
+  const [tailNumbers, setTailNumbers] = useState([]);
+  const [isAddingNewTail, setIsAddingNewTail] = useState(false);
+  const [newTailInput, setNewTailInput] = useState('');
 
-  // --- NEW: Step 1. Fetching Data on Load ---
-  // useEffect runs automatically when the component first appears on the screen
+  // Fetch both Logs and Tail Numbers on load
   useEffect(() => {
-    fetch('https://inspection-dashboard-6ds8.onrender.com/api/logs')
-      .then(response => response.json())
-      .then(data => {
-        setInspectionLogs(data); // Put the server data into our React state
-      })
-      .catch(error => console.error("Error fetching logs:", error));
-  }, []); // The empty array [] means "only do this once on load"
+    // ⚠️ REPLACE 'YOUR_RENDER_URL' WITH YOUR ACTUAL RENDER LINK
+    const API_BASE = 'YOUR_RENDER_URL'; 
 
+    fetch(`${API_BASE}/api/logs`)
+      .then(res => res.json())
+      .then(data => setInspectionLogs(data));
+
+    fetch(`${API_BASE}/api/tail-numbers`)
+      .then(res => res.json())
+      .then(data => {
+        setTailNumbers(data);
+        // Auto-select the first tail number if one exists
+        if(data.length > 0) {
+          setFormData(prev => ({ ...prev, tailNumber: data[0].tail_number }));
+        }
+      });
+  }, []); 
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setFormData(prevData => ({
-      ...prevData,
-      [name]: value
+    setFormData(prevData => ({ ...prevData, [name]: value }));
+  };
+
+  // --- NEW: Add a Tail Number to the Database ---
+  const handleSaveNewTail = async () => {
+    if (!newTailInput.trim()) return;
+    
+    const API_BASE = 'YOUR_RENDER_URL';
+    const response = await fetch(`${API_BASE}/api/tail-numbers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tail_number: newTailInput.toUpperCase() })
+    });
+
+    if (response.ok) {
+      const savedTail = await response.json();
+      setTailNumbers([...tailNumbers, savedTail]);
+      setFormData(prev => ({ ...prev, tailNumber: savedTail.tail_number }));
+      setIsAddingNewTail(false);
+      setNewTailInput('');
+    }
+  };
+
+  // --- NEW: Delete the currently selected Tail Number ---
+  const handleDeleteTail = async () => {
+    const tailToDelete = tailNumbers.find(t => t.tail_number === formData.tailNumber);
+    if (!tailToDelete) return;
+
+    const confirmDelete = window.confirm(`Permanently delete ${tailToDelete.tail_number}?`);
+    if (!confirmDelete) return;
+
+    const API_BASE = 'YOUR_RENDER_URL';
+    await fetch(`${API_BASE}/api/tail-numbers/${tailToDelete.id}`, { method: 'DELETE' });
+
+    const updatedTails = tailNumbers.filter(t => t.id !== tailToDelete.id);
+    setTailNumbers(updatedTails);
+    setFormData(prev => ({ 
+      ...prev, 
+      tailNumber: updatedTails.length > 0 ? updatedTails[0].tail_number : '' 
     }));
   };
 
-  // --- UPDATED: Step 2. Submitting Data ---
-  // Added 'async' so we can pause and wait for the server to respond
   const handleSubmit = async (event) => {
     event.preventDefault(); 
+    const API_BASE = 'YOUR_RENDER_URL';
     
-    try {
-      // We send the POST request to our Node.js server
-      const response = await fetch('https://inspection-dashboard-6ds8.onrender.com/api/logs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json' // Tell the server we are sending JSON
-        },
-        body: JSON.stringify(formData) // Package our form data
-      });
+    const response = await fetch(`${API_BASE}/api/logs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
 
-      if (response.ok) {
-        // The server sends back the newly saved log (with the ID and timestamp it generated)
-        const savedLog = await response.json();
-        
-        // Add the official server record to our UI
-        setInspectionLogs(prevLogs => [savedLog, ...prevLogs]);
-        
-        // Clear the form
-        setFormData({
-          model: 'Boeing 777',
-          tailNumber: '',
-          location: 'Everett Facility',
-          notes: ''
-        });
-      }
-    } catch (error) {
-      console.error("Error saving log to server:", error);
+    if (response.ok) {
+      const savedLog = await response.json();
+      setInspectionLogs(prevLogs => [savedLog, ...prevLogs]);
+      setFormData(prev => ({ ...prev, notes: '' })); // Only clear notes to save time on next entry
     }
   };
 
@@ -86,9 +117,36 @@ export default function App() {
           <input type="text" name="location" value={formData.location} onChange={handleChange} required />
         </div>
 
+        {/* --- UPDATED TAIL NUMBER UI --- */}
         <div className="form-group">
-          <label htmlFor="tailNumber">Tail Number:</label>
-          <input type="text" name="tailNumber" value={formData.tailNumber} onChange={handleChange} placeholder="e.g., N12345" required />
+          <label>Tail Number:</label>
+          
+          {!isAddingNewTail ? (
+            <div className="tail-manager">
+              <select name="tailNumber" value={formData.tailNumber} onChange={handleChange} required>
+                {tailNumbers.length === 0 && <option value="">-- No Tails Found --</option>}
+                {tailNumbers.map(t => (
+                  <option key={t.id} value={t.tail_number}>{t.tail_number}</option>
+                ))}
+              </select>
+              <button type="button" className="action-btn" onClick={() => setIsAddingNewTail(true)}>+ Add</button>
+              {tailNumbers.length > 0 && (
+                <button type="button" className="action-btn delete-btn" onClick={handleDeleteTail}>🗑️</button>
+              )}
+            </div>
+          ) : (
+            <div className="tail-manager">
+              <input 
+                type="text" 
+                value={newTailInput} 
+                onChange={(e) => setNewTailInput(e.target.value)} 
+                placeholder="e.g. N12345" 
+                autoFocus 
+              />
+              <button type="button" className="action-btn save-btn" onClick={handleSaveNewTail}>Save</button>
+              <button type="button" className="action-btn cancel-btn" onClick={() => setIsAddingNewTail(false)}>Cancel</button>
+            </div>
+          )}
         </div>
 
         <div className="form-group">
@@ -101,18 +159,14 @@ export default function App() {
 
       <section className="logs-section">
         <h2>Recent Inspections</h2>
-        {inspectionLogs.length === 0 ? (
-          <p>No inspections logged yet.</p>
-        ) : (
-          inspectionLogs.map(log => (
-            <div key={log.id} className="log-card">
-              <h3>{log.model} - {log.tail_number}</h3>
-              <p><strong>Location:</strong> {log.location}</p>
-              <p><strong>Logged at:</strong> {new Date(log.logged_at).toLocaleString()}</p>
-              <p><strong>Notes:</strong> {log.notes}</p>
-            </div>
-          ))
-        )}
+        {inspectionLogs.map(log => (
+          <div key={log.id} className="log-card">
+            <h3>{log.model} - {log.tail_number}</h3>
+            <p><strong>Location:</strong> {log.location}</p>
+            <p><strong>Logged at:</strong> {new Date(log.logged_at).toLocaleString()}</p>
+            <p><strong>Notes:</strong> {log.notes}</p>
+          </div>
+        ))}
       </section>
     </main>
   );

@@ -57,7 +57,42 @@ app.post('/api/logs', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+// --- NEW TAIL NUMBER ROUTES ---
 
+// GET: Fetch all saved tail numbers for the dropdown
+app.get('/api/tail-numbers', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM tail_numbers ORDER BY tail_number ASC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+// POST: Add a new tail number permanently
+app.post('/api/tail-numbers', async (req, res) => {
+    try {
+        const { tail_number } = req.body;
+        const newTail = await pool.query(
+            'INSERT INTO tail_numbers (tail_number) VALUES ($1) RETURNING *',
+            [tail_number]
+        );
+        res.status(201).json(newTail.rows[0]);
+    } catch (err) {
+        res.status(500).send('Error saving tail number (might be a duplicate)');
+    }
+});
+
+// DELETE: Remove a tail number
+app.delete('/api/tail-numbers/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM tail_numbers WHERE id = $1', [id]);
+        res.json({ message: 'Tail number deleted' });
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
 // --- Start the Server ---
 app.listen(PORT, () => {
     console.log(`🚀 API Server running on http://localhost:${PORT}`);
