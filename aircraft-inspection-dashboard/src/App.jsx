@@ -45,19 +45,32 @@ export default function App() {
   const handleSaveNewTail = async () => {
     if (!newTailInput.trim()) return;
     
-    const API_BASE = 'YOUR_RENDER_URL';
-    const response = await fetch(`${API_BASE}/api/tail-numbers`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tail_number: newTailInput.toUpperCase() })
-    });
+    try {
+      // Your actual live Render server URL
+      const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com'; 
+      
+      const response = await fetch(`${API_BASE}/api/tail-numbers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tail_number: newTailInput.toUpperCase() })
+      });
 
-    if (response.ok) {
-      const savedTail = await response.json();
-      setTailNumbers([...tailNumbers, savedTail]);
-      setFormData(prev => ({ ...prev, tailNumber: savedTail.tail_number }));
-      setIsAddingNewTail(false);
-      setNewTailInput('');
+      if (response.ok) {
+        // Success!
+        const savedTail = await response.json();
+        setTailNumbers([...tailNumbers, savedTail]);
+        setFormData(prev => ({ ...prev, tailNumber: savedTail.tail_number }));
+        setIsAddingNewTail(false);
+        setNewTailInput('');
+      } else {
+        // NO MORE SILENT FAILURES: Show the database error
+        const errorText = await response.text();
+        alert(`Failed to save: ${errorText}`);
+      }
+    } catch (error) {
+       // Catches network errors (like the server being asleep)
+       alert("Network Error: Could not reach the server. Is Render awake?");
+       console.error(error);
     }
   };
 
@@ -137,12 +150,18 @@ export default function App() {
           ) : (
             <div className="tail-manager">
               <input 
-                type="text" 
-                value={newTailInput} 
-                onChange={(e) => setNewTailInput(e.target.value)} 
-                placeholder="e.g. N12345" 
-                autoFocus 
-              />
+  type="text" 
+  value={newTailInput} 
+  onChange={(e) => setNewTailInput(e.target.value)} 
+  onKeyDown={(e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Stops the main form from submitting!
+      handleSaveNewTail(); // Saves the tail number instead
+    }
+  }}
+  placeholder="e.g. N12345" 
+  autoFocus 
+/>
               <button type="button" className="action-btn save-btn" onClick={handleSaveNewTail}>Save</button>
               <button type="button" className="action-btn cancel-btn" onClick={() => setIsAddingNewTail(false)}>Cancel</button>
             </div>
