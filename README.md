@@ -1,2 +1,3 @@
 # inspection-dashboard
-A refresher project for aircraft maintenance logging.
+A refresher project for to do list creation
+
