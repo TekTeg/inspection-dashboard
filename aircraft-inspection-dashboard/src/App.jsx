@@ -18,8 +18,8 @@ export default function App() {
   const [editText, setEditText] = useState("");
 
   // ⚠️ Switch back to your Render URL when you are ready to deploy!
-  const API_BASE = 'http://localhost:3000'; 
-
+  // const API_BASE = 'http://localhost:3000'; 
+const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com';
   useEffect(() => {
     fetch(`${API_BASE}/api/todos`)
       .then(res => res.json())
