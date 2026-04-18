@@ -180,3 +180,52 @@ body {
     width: auto;
   }
 }
+/* --- Action Buttons & Edit Mode --- */
+.task-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  opacity: 0.6;
+  transition: 0.2s;
+  padding: 0.25rem;
+}
+
+.icon-btn:hover:not(:disabled) {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.icon-btn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+.edit-mode {
+  flex: 1;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-mode input {
+  flex: 1;
+  padding: 0.4rem;
+  border: 2px solid #3b82f6;
+  border-radius: 4px;
+}
+
+.save-edit-btn, .cancel-edit-btn {
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0 0.5rem;
+}
+
+.save-edit-btn { background-color: #3b82f6; color: white; }
+.cancel-edit-btn { background-color: #e5e7eb; color: #374151; }
