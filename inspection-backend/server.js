@@ -68,6 +68,16 @@ app.put('/api/todos/:id/restore', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+// 5. Delete a task permanently
+app.delete('/api/todos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM todos WHERE id = $1', [id]);
+        res.json({ message: 'Task deleted' });
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

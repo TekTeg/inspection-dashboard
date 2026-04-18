@@ -15,7 +15,7 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState(getLocalDateString(new Date()));
 
   const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com'; // Your live backend
-
+// const API_BASE = 'http://localhost:3000'
   // Fetch all tasks on load
   useEffect(() => {
     fetch(`${API_BASE}/api/todos`)
@@ -69,7 +69,17 @@ export default function App() {
       setTodos(todos.map(t => t.id === id ? updatedTask : t));
     }
   };
+const handleDelete = async (id) => {
+    // Optional: Add a confirmation pop-up so you don't delete things by accident!
+    const confirmDelete = window.confirm("Are you sure you want to delete this task forever?");
+    if (!confirmDelete) return;
 
+    const res = await fetch(`${API_BASE}/api/todos/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      // Filter out the deleted task from the state so it vanishes from the screen immediately
+      setTodos(todos.filter(t => t.id !== id));
+    }
+  };
   // --- CALENDAR LOGIC (Current Month) ---
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -100,7 +110,8 @@ export default function App() {
                 type="checkbox" 
                 onChange={() => handleComplete(todo.id)} 
               />
-              <span>{todo.task}</span>
+              <span className="task-text">{todo.task}</span>
+              <button onClick={() => handleDelete(todo.id)} className="delete-btn" title="Delete Task">🗑️</button>
             </li>
           ))}
         </ul>
