@@ -1,192 +1,149 @@
 import { useState, useEffect } from 'react';
-import './App.css'; 
+import './App.css';
+
+// Helper function to get local date string as 'YYYY-MM-DD'
+const getLocalDateString = (dateObj) => {
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export default function App() {
-  const [formData, setFormData] = useState({
-    model: 'Boeing 777', 
-    tailNumber: '',
-    location: 'Everett Facility',
-    notes: ''
+  const [todos, setTodos] = useState([]);
+  const [newTask, setNewTask] = useState('');
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString(new Date()));
+
+  const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com'; // Your live backend
+
+  // Fetch all tasks on load
+  useEffect(() => {
+    fetch(`${API_BASE}/api/todos`)
+      .then(res => res.json())
+      .then(data => setTodos(data));
+  }, []);
+
+  // Filter tasks into active and completed categories
+  const activeTasks = todos.filter(t => !t.is_completed);
+  const completedTasks = todos.filter(t => t.is_completed);
+  
+  // Find completed tasks specifically for the currently selected calendar day
+  const tasksForSelectedDate = completedTasks.filter(t => {
+    // Postgres dates sometimes return with timezone data, we just want the 'YYYY-MM-DD' part
+    const dbDate = t.completed_date ? t.completed_date.split('T')[0] : '';
+    return dbDate === selectedDate;
   });
 
-  const [inspectionLogs, setInspectionLogs] = useState([]);
-  
-  // NEW STATE: For managing the dynamic tail numbers
-  const [tailNumbers, setTailNumbers] = useState([]);
-  const [isAddingNewTail, setIsAddingNewTail] = useState(false);
-  const [newTailInput, setNewTailInput] = useState('');
+  // --- ACTIONS ---
+  const handleAddTask = async (e) => {
+    e.preventDefault();
+    if (!newTask.trim()) return;
 
-  // Fetch both Logs and Tail Numbers on load
-  useEffect(() => {
-    // ⚠️ REPLACE 'YOUR_RENDER_URL' WITH YOUR ACTUAL RENDER LINK
-    const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com'; 
-
-    fetch(`${API_BASE}/api/logs`)
-      .then(res => res.json())
-      .then(data => setInspectionLogs(data));
-
-    fetch(`${API_BASE}/api/tail-numbers`)
-      .then(res => res.json())
-      .then(data => {
-        setTailNumbers(data);
-        // Auto-select the first tail number if one exists
-        if(data.length > 0) {
-          setFormData(prev => ({ ...prev, tailNumber: data[0].tail_number }));
-        }
-      });
-  }, []); 
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData(prevData => ({ ...prevData, [name]: value }));
-  };
-
-  // --- NEW: Add a Tail Number to the Database ---
-  const handleSaveNewTail = async () => {
-    if (!newTailInput.trim()) return;
-    
-    try {
-      // Your actual live Render server URL
-      const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com'; 
-      
-      const response = await fetch(`${API_BASE}/api/tail-numbers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tail_number: newTailInput.toUpperCase() })
-      });
-
-      if (response.ok) {
-        // Success!
-        const savedTail = await response.json();
-        setTailNumbers([...tailNumbers, savedTail]);
-        setFormData(prev => ({ ...prev, tailNumber: savedTail.tail_number }));
-        setIsAddingNewTail(false);
-        setNewTailInput('');
-      } else {
-        // NO MORE SILENT FAILURES: Show the database error
-        const errorText = await response.text();
-        alert(`Failed to save: ${errorText}`);
-      }
-    } catch (error) {
-       // Catches network errors (like the server being asleep)
-       alert("Network Error: Could not reach the server. Is Render awake?");
-       console.error(error);
-    }
-  };
-
-  // --- NEW: Delete the currently selected Tail Number ---
-  const handleDeleteTail = async () => {
-    const tailToDelete = tailNumbers.find(t => t.tail_number === formData.tailNumber);
-    if (!tailToDelete) return;
-
-    const confirmDelete = window.confirm(`Permanently delete ${tailToDelete.tail_number}?`);
-    if (!confirmDelete) return;
-
-    const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com';
-    await fetch(`${API_BASE}/api/tail-numbers/${tailToDelete.id}`, { method: 'DELETE' });
-
-    const updatedTails = tailNumbers.filter(t => t.id !== tailToDelete.id);
-    setTailNumbers(updatedTails);
-    setFormData(prev => ({ 
-      ...prev, 
-      tailNumber: updatedTails.length > 0 ? updatedTails[0].tail_number : '' 
-    }));
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault(); 
-    const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com';
-    
-    const response = await fetch(`${API_BASE}/api/logs`, {
+    const res = await fetch(`${API_BASE}/api/todos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
+      body: JSON.stringify({ task: newTask })
     });
+    const savedTask = await res.json();
+    setTodos([savedTask, ...todos]);
+    setNewTask('');
+  };
 
-    if (response.ok) {
-      const savedLog = await response.json();
-      setInspectionLogs(prevLogs => [savedLog, ...prevLogs]);
-      setFormData(prev => ({ ...prev, notes: '' })); // Only clear notes to save time on next entry
+  const handleComplete = async (id) => {
+    const todayStr = getLocalDateString(new Date());
+    const res = await fetch(`${API_BASE}/api/todos/${id}/complete`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: todayStr })
+    });
+    if (res.ok) {
+      const updatedTask = await res.json();
+      setTodos(todos.map(t => t.id === id ? updatedTask : t));
     }
   };
 
-  return (
-    <main className="dashboard-container">
-      <h1>New Inspection Log</h1>
-      <p>Enter structural check and maintenance details below.</p>
-
-      <form onSubmit={handleSubmit} className="inspection-form">
-        <div className="form-group">
-          <label htmlFor="model">Aircraft Model:</label>
-          <select name="model" value={formData.model} onChange={handleChange} required>
-            <option value="Boeing 767">Boeing 767</option>
-            <option value="Boeing 777">Boeing 777</option>
-            <option value="Boeing 787 Dreamliner">Boeing 787 Dreamliner</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="location">Facility Location:</label>
-          <input type="text" name="location" value={formData.location} onChange={handleChange} required />
-        </div>
-
-        {/* --- UPDATED TAIL NUMBER UI --- */}
-        <div className="form-group">
-          <label>Tail Number:</label>
-          
-          {!isAddingNewTail ? (
-            <div className="tail-manager">
-              <select name="tailNumber" value={formData.tailNumber} onChange={handleChange} required>
-                {tailNumbers.length === 0 && <option value="">-- No Tails Found --</option>}
-                {tailNumbers.map(t => (
-                  <option key={t.id} value={t.tail_number}>{t.tail_number}</option>
-                ))}
-              </select>
-              <button type="button" className="action-btn" onClick={() => setIsAddingNewTail(true)}>+ Add</button>
-              {tailNumbers.length > 0 && (
-                <button type="button" className="action-btn delete-btn" onClick={handleDeleteTail}>🗑️</button>
-              )}
-            </div>
-          ) : (
-            <div className="tail-manager">
-              <input 
-  type="text" 
-  value={newTailInput} 
-  onChange={(e) => setNewTailInput(e.target.value)} 
-  onKeyDown={(e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault(); // Stops the main form from submitting!
-      handleSaveNewTail(); // Saves the tail number instead
+  const handleRestore = async (id) => {
+    const res = await fetch(`${API_BASE}/api/todos/${id}/restore`, { method: 'PUT' });
+    if (res.ok) {
+      const updatedTask = await res.json();
+      setTodos(todos.map(t => t.id === id ? updatedTask : t));
     }
-  }}
-  placeholder="e.g. N12345" 
-  autoFocus 
-/>
-              <button type="button" className="action-btn save-btn" onClick={handleSaveNewTail}>Save</button>
-              <button type="button" className="action-btn cancel-btn" onClick={() => setIsAddingNewTail(false)}>Cancel</button>
-            </div>
+  };
+
+  // --- CALENDAR LOGIC (Current Month) ---
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const calendarDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  return (
+    <div className="app-layout">
+      {/* LEFT SIDE: Active To-Do List */}
+      <main className="todo-section">
+        <h1>Active Tasks</h1>
+        <form onSubmit={handleAddTask} className="add-task-form">
+          <input 
+            type="text" 
+            value={newTask} 
+            onChange={(e) => setNewTask(e.target.value)} 
+            placeholder="What needs to be done?" 
+          />
+          <button type="submit">Add</button>
+        </form>
+
+        <ul className="task-list">
+          {activeTasks.length === 0 && <p className="empty-state">All caught up!</p>}
+          {activeTasks.map(todo => (
+            <li key={todo.id} className="task-item">
+              <input 
+                type="checkbox" 
+                onChange={() => handleComplete(todo.id)} 
+              />
+              <span>{todo.task}</span>
+            </li>
+          ))}
+        </ul>
+      </main>
+
+      {/* RIGHT SIDE: Calendar & Completed Tasks */}
+      <aside className="calendar-section">
+        <h2>{today.toLocaleString('default', { month: 'long' })} {currentYear}</h2>
+        
+        <div className="calendar-grid">
+          {calendarDays.map(day => {
+            const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            // Check if any tasks were completed on this specific day
+            const hasCompletedTasks = completedTasks.some(t => t.completed_date && t.completed_date.split('T')[0] === dateStr);
+            
+            return (
+              <div 
+                key={day} 
+                className={`calendar-day ${hasCompletedTasks ? 'has-tasks' : ''} ${selectedDate === dateStr ? 'selected' : ''}`}
+                onClick={() => setSelectedDate(dateStr)}
+              >
+                {day}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="completed-logs">
+          <h3>Completed on {selectedDate}</h3>
+          {tasksForSelectedDate.length === 0 ? (
+            <p className="empty-state">No tasks completed on this day.</p>
+          ) : (
+            <ul className="task-list completed-list">
+              {tasksForSelectedDate.map(todo => (
+                <li key={todo.id} className="task-item">
+                  <span className="strikethrough">{todo.task}</span>
+                  <button onClick={() => handleRestore(todo.id)} className="restore-btn">↩️ Restore</button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
-
-        <div className="form-group">
-          <label htmlFor="notes">Inspection Notes:</label>
-          <textarea name="notes" value={formData.notes} onChange={handleChange} rows="5" required />
-        </div>
-
-        <button type="submit" className="submit-btn">Submit Log</button>
-      </form>
-
-      <section className="logs-section">
-        <h2>Recent Inspections</h2>
-        {inspectionLogs.map(log => (
-          <div key={log.id} className="log-card">
-            <h3>{log.model} - {log.tail_number}</h3>
-            <p><strong>Location:</strong> {log.location}</p>
-            <p><strong>Logged at:</strong> {new Date(log.logged_at).toLocaleString()}</p>
-            <p><strong>Notes:</strong> {log.notes}</p>
-          </div>
-        ))}
-      </section>
-    </main>
+      </aside>
+    </div>
   );
 }

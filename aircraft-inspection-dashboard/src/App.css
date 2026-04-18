@@ -1,107 +1,161 @@
-.logs-section {
-  margin-top: 3rem;
-  border-top: 2px solid #cbd5e0;
-  padding-top: 2rem;
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f3f4f6;
+  color: #1f2937;
 }
 
-.logs-section h2 {
-  margin-bottom: 1rem;
-  color: #72634f;
+.app-layout {
+  display: flex;
+  max-width: 1000px;
+  margin: 2rem auto;
+  gap: 2rem;
+  padding: 0 1rem;
 }
 
-.log-card {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-  border-radius: 6px;
-  border-left: 5px solid #0033a1; /* Aviation blue accent */
-  text-align: left;
+/* --- Left Side: Todos --- */
+.todo-section {
+  flex: 1;
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
-.log-card h3 {
-  margin-bottom: 0.5rem;
-  color: #1a202c;
-}
-
-.log-card p {
-  margin-bottom: 0.25rem;
-  color: #4a5568;
-}
-/* =========================================
-   📱 MOBILE RESPONSIVENESS (Media Queries)
-   ========================================= */
-
-@media (max-width: 600px) {
-  /* 1. Make the main container take up the whole screen */
-  .dashboard-container {
-    margin: 0;
-    padding: 1rem;
-    width: 100%;
-    max-width: 100%;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  /* 2. Adjust typography for smaller screens */
-  h1 {
-    font-size: 1.5rem;
-  }
-  
-  h2 {
-    font-size: 1.25rem;
-  }
-
-  /* 3. Make form fields larger and touch-friendly */
-  input, select, textarea {
-    font-size: 1rem; /* Prevents iPhones from auto-zooming! */
-    padding: 0.75rem;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  /* 4. Make the submit button a massive tap target */
-  .submit-btn {
-    width: 100%;
-    padding: 1rem;
-    font-size: 1.1rem;
-    margin-top: 1rem;
-  }
-
-  /* 5. Tighten up the log cards so they fit the screen */
-  .log-card {
-    padding: 1rem;
-    margin-bottom: 0.75rem;
-  }
-}
-/* --- Tail Number Manager Styles --- */
-.tail-manager {
+.add-task-form {
   display: flex;
   gap: 0.5rem;
-  align-items: center;
-  justify-content: center; /* NEW: Centers the dropdown and buttons in the middle of the form */
+  margin-bottom: 2rem;
 }
 
-.tail-manager select, .tail-manager input {
-  flex-grow: 0;
-  width: auto;
-  min-width: 200px;
-  text-align: center;
-  text-align-last: center; /* NEW: Forces stubborn browsers to center the text inside the dropdown */
+.add-task-form input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
 }
 
-.action-btn {
-  padding: 0 0.75rem;
-  font-size: 0.9rem;
+.add-task-form button {
+  padding: 0.75rem 1.5rem;
+  background-color: #3b82f6;
+  color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  background-color: #edf2f7;
-  color: #2d3748;
-  transition: 0.2s ease;
+  font-weight: bold;
 }
 
-.action-btn:hover { background-color: #e2e8f0; }
-.save-btn { background-color: #48bb78; color: white; }
-.save-btn:hover { background-color: #38a169; }
-.delete-btn:hover { background-color: #fed7d7; }
+/* --- Task Lists --- */
+.task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.task-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.strikethrough {
+  text-decoration: line-through;
+  color: #6b7280;
+  flex: 1;
+}
+
+.restore-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #4b5563;
+  background-color: #e5e7eb;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* --- Right Side: Calendar --- */
+.calendar-section {
+  width: 350px;
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-section h2 {
+  margin-top: 0;
+  text-align: center;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  background-color: #f9fafb;
+}
+
+.calendar-day:hover {
+  background-color: #e5e7eb;
+}
+
+.calendar-day.has-tasks {
+  background-color: #dbeafe;
+  color: #1e40af;
+  font-weight: bold;
+  border: 2px solid #bfdbfe;
+}
+
+.calendar-day.selected {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.completed-logs {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+  flex: 1;
+}
+
+.empty-state {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 800px) {
+  .app-layout {
+    flex-direction: column;
+  }
+  .calendar-section {
+    width: auto;
+  }
+}
