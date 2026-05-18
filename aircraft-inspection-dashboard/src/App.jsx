@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './App.css';
 
 const getLocalDateString = (dateObj) => {
@@ -9,16 +10,13 @@ const getLocalDateString = (dateObj) => {
 };
 
 export default function App() {
-  // 1. ALL state goes inside the component!
   const [todos, setTodos] = useState([]);
   const [newTask, setNewTask] = useState('');
   const [selectedDate, setSelectedDate] = useState(getLocalDateString(new Date()));
   
-  // Track which task is being edited
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
 
-  // Track the month and year currently displayed on the calendar
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
 
@@ -30,7 +28,6 @@ export default function App() {
       .then(data => setTodos(data));
   }, []);
 
-  // Filter and SORT the active tasks by our sort_order column
   const activeTasks = todos
     .filter(t => !t.is_completed)
     .sort((a, b) => b.sort_order - a.sort_order);
@@ -134,8 +131,8 @@ export default function App() {
   // --- Calendar Navigation Logic ---
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
-      setViewMonth(11); // Loop back to December
-      setViewYear(viewYear - 1); // Go back one year
+      setViewMonth(11);
+      setViewYear(viewYear - 1);
     } else {
       setViewMonth(viewMonth - 1);
     }
@@ -143,108 +140,156 @@ export default function App() {
 
   const handleNextMonth = () => {
     if (viewMonth === 11) {
-      setViewMonth(0); // Loop forward to January
-      setViewYear(viewYear + 1); // Go forward one year
+      setViewMonth(0);
+      setViewYear(viewYear + 1);
     } else {
       setViewMonth(viewMonth + 1);
     }
   };
 
-  // Calculate days based on the VIEWED month
+  // --- THIS IS THE BLOCK YOU ASKED ABOUT ---
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const calendarDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const monthName = new Date(viewYear, viewMonth).toLocaleString('default', { month: 'long' });
 
+  const graphData = calendarDays.map(day => {
+    const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const tasksCompletedToday = completedTasks.filter(t => t.completed_date && t.completed_date.split('T')[0] === dateStr).length;
+    
+    return { 
+      dateLabel: `${monthName.substring(0, 3)} ${day}`,
+      tasks: tasksCompletedToday 
+    };
+  });
+  // ------------------------------------------
+
   return (
-    <div className="app-layout">
-      <main className="todo-section">
-        <h1>Active Tasks</h1>
-        <form onSubmit={handleAddTask} className="add-task-form">
-          <input 
-            type="text" 
-            value={newTask} 
-            onChange={(e) => setNewTask(e.target.value)} 
-            placeholder="What needs to be done?" 
-          />
-          <button type="submit">Add</button>
-        </form>
+    <div className="app-master-container">
+      
+      <div className="app-layout">
+        <main className="todo-section">
+          <h1>Active Tasks</h1>
+          <form onSubmit={handleAddTask} className="add-task-form">
+            <input 
+              type="text" 
+              value={newTask} 
+              onChange={(e) => setNewTask(e.target.value)} 
+              placeholder="What needs to be done?" 
+            />
+            <button type="submit">Add</button>
+          </form>
 
-        <ul className="task-list">
-          {activeTasks.length === 0 && <p className="empty-state">All caught up!</p>}
-          {activeTasks.map((todo, index) => (
-            <li key={todo.id} className="task-item">
-              <input 
-                type="checkbox" 
-                onChange={() => handleComplete(todo.id)} 
+          <ul className="task-list">
+            {activeTasks.length === 0 && <p className="empty-state">All caught up!</p>}
+            {activeTasks.map((todo, index) => (
+              <li key={todo.id} className="task-item">
+                <input 
+                  type="checkbox" 
+                  onChange={() => handleComplete(todo.id)} 
+                />
+                
+                {editingId === todo.id ? (
+                  <div className="edit-mode">
+                    <input 
+                      type="text" 
+                      value={editText} 
+                      onChange={(e) => setEditText(e.target.value)}
+                      autoFocus
+                    />
+                    <button onClick={() => saveEdit(todo.id)} className="save-edit-btn">Save</button>
+                    <button onClick={() => setEditingId(null)} className="cancel-edit-btn">Cancel</button>
+                  </div>
+                ) : (
+                  <span className="task-text">{todo.task}</span>
+                )}
+
+                {editingId !== todo.id && (
+                  <div className="task-actions">
+                    <button onClick={() => startEditing(todo)} className="icon-btn" title="Edit">✏️</button>
+                    <button onClick={() => handleMove(index, 'up')} disabled={index === 0} className="icon-btn">⬆️</button>
+                    <button onClick={() => handleMove(index, 'down')} disabled={index === activeTasks.length - 1} className="icon-btn">⬇️</button>
+                    <button onClick={() => handleDelete(todo.id)} className="icon-btn delete-btn" title="Delete">🗑️</button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </main>
+
+        <aside className="calendar-section">
+          <div className="calendar-header">
+            <button onClick={handlePrevMonth} className="month-nav-btn">◀</button>
+            <h2>{monthName} {viewYear}</h2>
+            <button onClick={handleNextMonth} className="month-nav-btn">▶</button>
+          </div>
+          
+          <div className="calendar-grid">
+            {calendarDays.map(day => {
+              const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const hasCompletedTasks = completedTasks.some(t => t.completed_date && t.completed_date.split('T')[0] === dateStr);
+              return (
+                <div 
+                  key={day} 
+                  className={`calendar-day ${hasCompletedTasks ? 'has-tasks' : ''} ${selectedDate === dateStr ? 'selected' : ''}`}
+                  onClick={() => setSelectedDate(dateStr)}
+                >
+                  {day}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="completed-logs">
+            <h3>Completed on {selectedDate}</h3>
+            {tasksForSelectedDate.length === 0 ? (
+              <p className="empty-state">No tasks completed on this day.</p>
+            ) : (
+              <ul className="task-list completed-list">
+                {tasksForSelectedDate.map(todo => (
+                  <li key={todo.id} className="task-item">
+                    <span className="strikethrough">{todo.task}</span>
+                    <button onClick={() => handleRestore(todo.id)} className="restore-btn">↩️ Restore</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </aside>
+      </div>
+
+      {/* --- NEW: Full Width Analytics Graph --- */}
+      <section className="analytics-section">
+        <h2>Productivity: {monthName} {viewYear}</h2>
+        <div className="chart-container">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={graphData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <XAxis 
+                dataKey="dateLabel" 
+                tick={{ fill: 'var(--text)', fontSize: 12 }} 
+                tickMargin={10} 
               />
-              
-              {editingId === todo.id ? (
-                <div className="edit-mode">
-                  <input 
-                    type="text" 
-                    value={editText} 
-                    onChange={(e) => setEditText(e.target.value)}
-                    autoFocus
-                  />
-                  <button onClick={() => saveEdit(todo.id)} className="save-edit-btn">Save</button>
-                  <button onClick={() => setEditingId(null)} className="cancel-edit-btn">Cancel</button>
-                </div>
-              ) : (
-                <span className="task-text">{todo.task}</span>
-              )}
-
-              {editingId !== todo.id && (
-                <div className="task-actions">
-                  <button onClick={() => startEditing(todo)} className="icon-btn" title="Edit">✏️</button>
-                  <button onClick={() => handleMove(index, 'up')} disabled={index === 0} className="icon-btn">⬆️</button>
-                  <button onClick={() => handleMove(index, 'down')} disabled={index === activeTasks.length - 1} className="icon-btn">⬇️</button>
-                  <button onClick={() => handleDelete(todo.id)} className="icon-btn delete-btn" title="Delete">🗑️</button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      </main>
-
-      <aside className="calendar-section">
-        <div className="calendar-header">
-          <button onClick={handlePrevMonth} className="month-nav-btn">◀</button>
-          <h2>{monthName} {viewYear}</h2>
-          <button onClick={handleNextMonth} className="month-nav-btn">▶</button>
+              <YAxis 
+                allowDecimals={false} 
+                tick={{ fill: 'var(--text)', fontSize: 12 }} 
+              />
+              <Tooltip 
+                contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg)' }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="tasks" 
+                name="Tasks Completed"
+                stroke="var(--accent)" 
+                strokeWidth={4} 
+                dot={{ fill: 'var(--accent)', r: 4, strokeWidth: 2 }}
+                activeDot={{ r: 8 }} 
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
-        
-        <div className="calendar-grid">
-          {calendarDays.map(day => {
-            const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const hasCompletedTasks = completedTasks.some(t => t.completed_date && t.completed_date.split('T')[0] === dateStr);
-            return (
-              <div 
-                key={day} 
-                className={`calendar-day ${hasCompletedTasks ? 'has-tasks' : ''} ${selectedDate === dateStr ? 'selected' : ''}`}
-                onClick={() => setSelectedDate(dateStr)}
-              >
-                {day}
-              </div>
-            );
-          })}
-        </div>
+      </section>
 
-        <div className="completed-logs">
-          <h3>Completed on {selectedDate}</h3>
-          {tasksForSelectedDate.length === 0 ? (
-            <p className="empty-state">No tasks completed on this day.</p>
-          ) : (
-            <ul className="task-list completed-list">
-              {tasksForSelectedDate.map(todo => (
-                <li key={todo.id} className="task-item">
-                  <span className="strikethrough">{todo.task}</span>
-                  <button onClick={() => handleRestore(todo.id)} className="restore-btn">↩️ Restore</button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </aside>
     </div>
   );
 }

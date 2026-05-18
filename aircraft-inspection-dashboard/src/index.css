@@ -142,3 +142,47 @@ code {
   /* Use your custom accent background instead of hardcoded light blue */
   background-color: var(--accent-bg); 
 }
+
+/* --- Master Container --- */
+.app-master-container {
+  max-width: 1000px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem; /* Space between top layout and bottom graph */
+}
+
+/* --- Top Split Layout --- */
+.app-layout {
+  display: flex;
+  gap: 2rem;
+  /* Removed max-width and margin from here, they moved to master container */
+}
+
+/* --- Analytics Graph Section --- */
+.analytics-section {
+  background: var(--bg);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.analytics-section h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.25rem;
+}
+
+.chart-container {
+  width: 100%;
+  height: 300px; /* Sets a fixed height so the chart renders properly */
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 800px) {
+  .app-layout {
+    flex-direction: column;
+  }
+}
