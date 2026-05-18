@@ -30,6 +30,9 @@
   }
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 @media (prefers-color-scheme: dark) {
   :root {
     --text: #9ca3af;
@@ -108,4 +111,34 @@ code {
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
+}
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.calendar-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  /* Ensure header uses the right text color */
+  color: var(--text-h); 
+}
+
+.month-nav-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  /* Use your custom accent color instead of hardcoded blue */
+  color: var(--accent); 
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.month-nav-btn:hover {
+  /* Use your custom accent background instead of hardcoded light blue */
+  background-color: var(--accent-bg); 
 }
