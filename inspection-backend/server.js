@@ -14,29 +14,63 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// --- TODO API ROUTES ---
+// --- NEW: USER API ROUTES ---
 
-// 1. Get ALL tasks (Now ordered by our new sort_order column!)
-app.get('/api/todos', async (req, res) => {
+// Get all users
+app.get('/api/users', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM todos ORDER BY sort_order DESC');
+        const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
         res.json(result.rows);
     } catch (err) {
         res.status(500).send('Server Error');
     }
 });
 
-// 2. Add a new active task (Automatically sets its sort_order to match its new ID)
+// Add a new user
+app.post('/api/users', async (req, res) => {
+    try {
+        const { name } = req.body;
+        const result = await pool.query(
+            'INSERT INTO users (name) VALUES ($1) RETURNING *',
+            [name]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+// --- TODO API ROUTES ---
+
+// 1. Get ALL tasks (Now filters by user_id)
+app.get('/api/todos', async (req, res) => {
+    try {
+        const { user_id } = req.query;
+        let query = 'SELECT * FROM todos ORDER BY sort_order DESC';
+        let params = [];
+        
+        if (user_id) {
+            query = 'SELECT * FROM todos WHERE user_id = $1 ORDER BY sort_order DESC';
+            params = [user_id];
+        }
+        
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+// 2. Add a new active task (Now attaches the task to a specific user_id)
 app.post('/api/todos', async (req, res) => {
     try {
-        const { task } = req.body;
+        const { task, user_id } = req.body;
         const insertResult = await pool.query(
-            'INSERT INTO todos (task) VALUES ($1) RETURNING *',
-            [task]
+            'INSERT INTO todos (task, user_id) VALUES ($1, $2) RETURNING *',
+            [task, user_id || 1]
         );
         const newId = insertResult.rows[0].id;
         
-        // Update the new task to have a sort_order equal to its ID
         const finalResult = await pool.query(
             'UPDATE todos SET sort_order = $1 WHERE id = $2 RETURNING *',
             [newId, newId]
@@ -87,7 +121,7 @@ app.delete('/api/todos/:id', async (req, res) => {
     }
 });
 
-// 6. NEW: Edit a task's text
+// 6. Edit a task's text
 app.put('/api/todos/:id/edit', async (req, res) => {
     try {
         const { id } = req.params;
@@ -99,11 +133,10 @@ app.put('/api/todos/:id/edit', async (req, res) => {
     }
 });
 
-// 7. NEW: Swap the sort_order of two tasks to move them up/down
+// 7. Swap the sort_order of two tasks
 app.put('/api/todos/reorder', async (req, res) => {
     try {
         const { item1, item2 } = req.body;
-        // Update both items with their new swapped sort orders
         await pool.query('UPDATE todos SET sort_order = $1 WHERE id = $2', [item1.sort_order, item1.id]);
         await pool.query('UPDATE todos SET sort_order = $1 WHERE id = $2', [item2.sort_order, item2.id]);
         res.json({ message: 'Reordered successfully' });
