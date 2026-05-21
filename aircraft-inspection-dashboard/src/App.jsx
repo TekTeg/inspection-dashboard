@@ -10,23 +10,40 @@ const getLocalDateString = (dateObj) => {
 };
 
 export default function App() {
+  // --- USER STATE ---
+  const [users, setUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [newUserName, setNewUserName] = useState('');
+
+  // --- TODO STATE ---
   const [todos, setTodos] = useState([]);
   const [newTask, setNewTask] = useState('');
   const [selectedDate, setSelectedDate] = useState(getLocalDateString(new Date()));
-  
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
-
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
 
   const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com';
 
+  // 1. Fetch Users on Initial Load
   useEffect(() => {
-    fetch(`${API_BASE}/api/todos`)
+    fetch(`${API_BASE}/api/users`)
       .then(res => res.json())
-      .then(data => setTodos(data));
+      .then(data => {
+        setUsers(data);
+        if (data.length > 0) setSelectedUserId(data[0].id); // Default to Ababa
+      });
   }, []);
+
+  // 2. Fetch Todos ONLY for the Selected User
+  useEffect(() => {
+    if (selectedUserId) {
+      fetch(`${API_BASE}/api/todos?user_id=${selectedUserId}`)
+        .then(res => res.json())
+        .then(data => setTodos(data));
+    }
+  }, [selectedUserId]);
 
   const activeTasks = todos
     .filter(t => !t.is_completed)
@@ -40,14 +57,32 @@ export default function App() {
   });
 
   // --- ACTIONS ---
+
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    if (!newUserName.trim()) return;
+
+    const res = await fetch(`${API_BASE}/api/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newUserName })
+    });
+    if (res.ok) {
+      const savedUser = await res.json();
+      setUsers([...users, savedUser]);
+      setSelectedUserId(savedUser.id); // Auto-switch to the new user
+      setNewUserName('');
+    }
+  };
+
   const handleAddTask = async (e) => {
     e.preventDefault();
-    if (!newTask.trim()) return;
+    if (!newTask.trim() || !selectedUserId) return;
 
     const res = await fetch(`${API_BASE}/api/todos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task: newTask })
+      body: JSON.stringify({ task: newTask, user_id: selectedUserId })
     });
     const savedTask = await res.json();
     setTodos([savedTask, ...todos]);
@@ -84,7 +119,6 @@ export default function App() {
     }
   };
 
-  // --- Edit Logic ---
   const startEditing = (todo) => {
     setEditingId(todo.id);
     setEditText(todo.task);
@@ -103,7 +137,6 @@ export default function App() {
     }
   };
 
-  // --- Move Up/Down Logic ---
   const handleMove = async (currentIndex, direction) => {
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     const currentTodo = activeTasks[currentIndex];
@@ -128,7 +161,7 @@ export default function App() {
     });
   };
 
-  // --- Calendar Navigation Logic ---
+  // --- Calendar Logic ---
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
       setViewMonth(11);
@@ -147,7 +180,6 @@ export default function App() {
     }
   };
 
-  // --- THIS IS THE BLOCK YOU ASKED ABOUT ---
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const calendarDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const monthName = new Date(viewYear, viewMonth).toLocaleString('default', { month: 'long' });
@@ -161,14 +193,40 @@ export default function App() {
       tasks: tasksCompletedToday 
     };
   });
-  // ------------------------------------------
+
+  const activeUserName = users.find(u => u.id === Number(selectedUserId))?.name || "Loading...";
 
   return (
     <div className="app-master-container">
       
+      {/* --- NEW: USER SELECTION BAR --- */}
+      <header className="user-bar">
+        <div className="user-selector">
+          <label><strong>Current User: </strong></label>
+          <select 
+            value={selectedUserId} 
+            onChange={(e) => setSelectedUserId(e.target.value)}
+          >
+            {users.map(user => (
+              <option key={user.id} value={user.id}>{user.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <form onSubmit={handleAddUser} className="add-user-form">
+          <input 
+            type="text" 
+            placeholder="New user name" 
+            value={newUserName}
+            onChange={(e) => setNewUserName(e.target.value)}
+          />
+          <button type="submit">Add User</button>
+        </form>
+      </header>
+
       <div className="app-layout">
         <main className="todo-section">
-          <h1>Active Tasks</h1>
+          <h1>{activeUserName}'s Tasks</h1>
           <form onSubmit={handleAddTask} className="add-task-form">
             <input 
               type="text" 
@@ -257,9 +315,8 @@ export default function App() {
         </aside>
       </div>
 
-      {/* --- NEW: Full Width Analytics Graph --- */}
       <section className="analytics-section">
-        <h2>Productivity: {monthName} {viewYear}</h2>
+        <h2>{activeUserName}'s Productivity: {monthName} {viewYear}</h2>
         <div className="chart-container">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={graphData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
