@@ -229,3 +229,39 @@ body {
 
 .save-edit-btn { background-color: #3b82f6; color: white; }
 .cancel-edit-btn { background-color: #e5e7eb; color: #374151; }
+/* --- New CSV Export & Top Bar Styling --- */
+.user-actions {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.csv-btn {
+  padding: 0.5rem 1rem;
+  background-color: var(--social-bg);
+  color: var(--text-h);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.csv-btn:hover {
+  background-color: var(--border);
+}
+
+/* --- Entry Date Styling on Completed Tasks --- */
+.completed-task-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: left;
+}
+
+.entry-date-text {
+  font-size: 0.75rem;
+  color: var(--text);
+  font-style: italic;
+}

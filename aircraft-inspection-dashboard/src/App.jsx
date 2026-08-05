@@ -26,17 +26,15 @@ export default function App() {
 
   const API_BASE = 'https://inspection-dashboard-6ds8.onrender.com';
 
-  // 1. Fetch Users on Initial Load
   useEffect(() => {
     fetch(`${API_BASE}/api/users`)
       .then(res => res.json())
       .then(data => {
         setUsers(data);
-        if (data.length > 0) setSelectedUserId(data[0].id); // Default to Ababa
+        if (data.length > 0) setSelectedUserId(data[0].id); 
       });
   }, []);
 
-  // 2. Fetch Todos ONLY for the Selected User
   useEffect(() => {
     if (selectedUserId) {
       fetch(`${API_BASE}/api/todos?user_id=${selectedUserId}`)
@@ -56,8 +54,9 @@ export default function App() {
     return dbDate === selectedDate;
   });
 
-  // --- ACTIONS ---
+  const activeUserName = users.find(u => u.id === Number(selectedUserId))?.name || "Loading...";
 
+  // --- ACTIONS ---
   const handleAddUser = async (e) => {
     e.preventDefault();
     if (!newUserName.trim()) return;
@@ -70,7 +69,7 @@ export default function App() {
     if (res.ok) {
       const savedUser = await res.json();
       setUsers([...users, savedUser]);
-      setSelectedUserId(savedUser.id); // Auto-switch to the new user
+      setSelectedUserId(savedUser.id);
       setNewUserName('');
     }
   };
@@ -161,6 +160,34 @@ export default function App() {
     });
   };
 
+  // --- NEW: CSV DOWNLOAD LOGIC ---
+  const handleDownloadCSV = () => {
+    // 1. Set up the column headers
+    const headers = ["Task", "Status", "Entry Date", "Completion Date"];
+    
+    // 2. Map our tasks into CSV rows
+    const csvRows = todos.map(t => {
+      const taskText = `"${t.task.replace(/"/g, '""')}"`; // Escapes commas and quotes in tasks
+      const status = t.is_completed ? "Completed" : "Active";
+      const entryDate = t.created_at ? t.created_at.split('T')[0] : "Unknown";
+      const compDate = t.completed_date ? t.completed_date.split('T')[0] : "N/A";
+      
+      return [taskText, status, entryDate, compDate].join(",");
+    });
+    
+    // 3. Combine it all together
+    const csvContent = [headers.join(","), ...csvRows].join("\n");
+    
+    // 4. Trigger the browser download
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${activeUserName}_Tasks.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // --- Calendar Logic ---
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
@@ -194,12 +221,9 @@ export default function App() {
     };
   });
 
-  const activeUserName = users.find(u => u.id === Number(selectedUserId))?.name || "Loading...";
-
   return (
     <div className="app-master-container">
       
-      {/* --- NEW: USER SELECTION BAR --- */}
       <header className="user-bar">
         <div className="user-selector">
           <label><strong>Current User: </strong></label>
@@ -213,15 +237,21 @@ export default function App() {
           </select>
         </div>
 
-        <form onSubmit={handleAddUser} className="add-user-form">
-          <input 
-            type="text" 
-            placeholder="New user name" 
-            value={newUserName}
-            onChange={(e) => setNewUserName(e.target.value)}
-          />
-          <button type="submit">Add User</button>
-        </form>
+        {/* --- UPDATED: Grouped User Actions --- */}
+        <div className="user-actions">
+          <form onSubmit={handleAddUser} className="add-user-form">
+            <input 
+              type="text" 
+              placeholder="New user name" 
+              value={newUserName}
+              onChange={(e) => setNewUserName(e.target.value)}
+            />
+            <button type="submit">Add User</button>
+          </form>
+          <button onClick={handleDownloadCSV} className="csv-btn" title="Export to Excel/CSV">
+            📥 Export CSV
+          </button>
+        </div>
       </header>
 
       <div className="app-layout">
@@ -305,7 +335,13 @@ export default function App() {
               <ul className="task-list completed-list">
                 {tasksForSelectedDate.map(todo => (
                   <li key={todo.id} className="task-item">
-                    <span className="strikethrough">{todo.task}</span>
+                    {/* --- UPDATED: Shows Entry Date --- */}
+                    <div className="completed-task-info">
+                      <span className="strikethrough">{todo.task}</span>
+                      <span className="entry-date-text">
+                        Entered: {todo.created_at ? todo.created_at.split('T')[0] : 'Unknown'}
+                      </span>
+                    </div>
                     <button onClick={() => handleRestore(todo.id)} className="restore-btn">↩️ Restore</button>
                   </li>
                 ))}
